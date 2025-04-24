@@ -1,0 +1,212 @@
+{
+  "flights": [
+    {
+      "flight_number": "AA123",
+      "destination_airport_code": "LAX",
+      "city": "Los Angeles",
+      "company": "American Airlines",
+      "departure_time": "08:30",
+      "status": "On Time"
+    },
+    {
+      "flight_number": "BA456",
+      "destination_airport_code": "LHR",
+      "city": "London",
+      "company": "British Airways",
+      "departure_time": "09:45",
+      "status": "Delayed"
+    },
+    {
+      "flight_number": "LH789",
+      "destination_airport_code": "FRA",
+      "city": "Frankfurt",
+      "company": "Lufthansa",
+      "departure_time": "11:00",
+      "status": "On Time"
+    },
+    {
+      "flight_number": "AF101",
+      "destination_airport_code": "CDG",
+      "city": "Paris",
+      "company": "Air France",
+      "departure_time": "14:15",
+      "status": "Cancelled"
+    },
+    {
+      "flight_number": "UA202",
+      "destination_airport_code": "SEA",
+      "city": "Seattle",
+      "company": "United Airlines",
+      "departure_time": "15:30",
+      "status": "On Time"
+    },
+    {
+      "flight_number": "EK303",
+      "destination_airport_code": "DXB",
+      "city": "Dubai",
+      "company": "Emirates",
+      "departure_time": "16:45",
+      "status": "On Time"
+    },
+    {
+      "flight_number": "QF404",
+      "destination_airport_code": "MEL",
+      "city": "Melbourne",
+      "company": "Qantas",
+      "departure_time": "17:30",
+      "status": "Delayed"
+    },
+    {
+      "flight_number": "SQ505",
+      "destination_airport_code": "SIN",
+      "city": "Singapore",
+      "company": "Singapore Airlines",
+      "departure_time": "18:15",
+      "status": "On Time"
+    },
+    {
+      "flight_number": "JL606",
+      "destination_airport_code": "HND",
+      "city": "Tokyo",
+      "company": "Japan Airlines",
+      "departure_time": "19:00",
+      "status": "On Time"
+    },
+    {
+      "flight_number": "CX707",
+      "destination_airport_code": "HKG",
+      "city": "Hong Kong",
+      "company": "Cathay Pacific",
+      "departure_time": "20:45",
+      "status": "Delayed"
+    },
+    {
+      "flight_number": "QR808",
+      "destination_airport_code": "DOH",
+      "city": "Doha",
+      "company": "Qatar Airways",
+      "departure_time": "21:30",
+      "status": "On Time"
+    },
+    {
+      "flight_number": "MH909",
+      "destination_airport_code": "KUL",
+      "city": "Kuala Lumpur",
+      "company": "Malaysia Airlines",
+      "departure_time": "22:15",
+      "status": "Cancelled"
+    },
+    {
+      "flight_number": "AY110",
+      "destination_airport_code": "HEL",
+      "city": "Helsinki",
+      "company": "Finnair",
+      "departure_time": "23:00",
+      "status": "On Time"
+    },
+    {
+      "flight_number": "SK211",
+      "destination_airport_code": "ARN",
+      "city": "Stockholm",
+      "company": "Scandinavian Airlines",
+      "departure_time": "00:15",
+      "status": "On Time"
+    },
+    {
+      "flight_number": "DL312",
+      "destination_airport_code": "ATL",
+      "city": "Atlanta",
+      "company": "Delta Air Lines",
+      "departure_time": "01:30",
+      "status": "Delayed"
+    },
+    {
+      "flight_number": "TK413",
+      "destination_airport_code": "IST",
+      "city": "Istanbul",
+      "company": "Turkish Airlines",
+      "departure_time": "02:45",
+      "status": "On Time"
+    },
+    {
+      "flight_number": "ET514",
+      "destination_airport_code": "JNB",
+      "city": "Johannesburg",
+      "company": "Ethiopian Airlines",
+      "departure_time": "03:30",
+      "status": "On Time"
+    },
+    {
+      "flight_number": "AI615",
+      "destination_airport_code": "DEL",
+      "city": "New Delhi",
+      "company": "Air India",
+      "departure_time": "04:15",
+      "status": "On Time"
+    },
+    {
+      "flight_number": "VS716",
+      "destination_airport_code": "JNB",
+      "city": "Johannesburg",
+      "company": "Virgin Atlantic",
+      "departure_time": "05:00",
+      "status": "Cancelled"
+    },
+    {
+      "flight_number": "AA817",
+      "destination_airport_code": "ORD",
+      "city": "Chicago",
+      "company": "American Airlines",
+      "departure_time": "06:15",
+      "status": "On Time"
+    },
+    {
+      "flight_number": "BA918",
+      "destination_airport_code": "MAD",
+      "city": "Madrid",
+      "company": "British Airways",
+      "departure_time": "07:00",
+      "status": "Delayed"
+    },
+    {
+      "flight_number": "LH100",
+      "destination_airport_code": "MUC",
+      "city": "Munich",
+      "company": "Lufthansa",
+      "departure_time": "08:45",
+      "status": "On Time"
+    },
+    {
+      "flight_number": "AF201",
+      "destination_airport_code": "LIS",
+      "city": "Lisbon",
+      "company": "Air France",
+      "departure_time": "09:30",
+      "status": "On Time"
+    },
+    {
+      "flight_number": "UA322",
+      "destination_airport_code": "SFO",
+      "city": "San Francisco",
+      "company": "United Airlines",
+      "departure_time": "10:45",
+      "status": "Delayed"
+    },
+    {
+      "flight_number": "EK423",
+      "destination_airport_code": "BOM",
+      "city": "Mumbai",
+      "company": "Emirates",
+      "departure_time": "11:30",
+      "status": "On Time"
+    },
+    {
+      "flight_number": "QF434",
+      "destination_airport_code": "MEL",
+      "city": "Melbourne",
+      "company": "Qantas",
+      "departure_time": "12:15",
+      "status": "On Time"
+    }
+  ]
+}
