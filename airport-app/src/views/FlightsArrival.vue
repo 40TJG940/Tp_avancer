@@ -18,6 +18,11 @@
         Loading flights...
       </div>
       
+      <div v-else-if="error" class="error">
+        <p>{{ error.message }}</p>
+        <button @click="retryLoad" class="retry-button">Retry</button>
+      </div>
+      
       <div v-else class="flights-list">
         <Flight
           v-for="(flight, index) in filteredFlights"
@@ -27,8 +32,11 @@
           :is-followed="isFlightFollowed(flight.flight_number)"
           @follow="openFollowModal"
         />
-        <p v-if="filteredFlights.length === 0" class="no-results">
+        <p v-if="filteredFlights.length === 0 && searchFlightInput" class="no-results">
           No flights found matching your search criteria.
+        </p>
+        <p v-else-if="flights.length === 0" class="no-data">
+          No arrival flights available.
         </p>
       </div>
       
@@ -36,12 +44,19 @@
         <div class="modal-content">
           <h3>Follow Flight {{ selectedFlight.flight_number }}</h3>
           <label for="followEmail">Your email:</label>
-          <input id="followEmail" v-model="followEmail" type="email">
+          <input 
+            id="followEmail" 
+            v-model="followEmail" 
+            type="email"
+            :class="{ 'error': emailError }"
+          >
+          <p v-if="emailError" class="error-message">{{ emailError }}</p>
+          <p v-if="followError" class="error-message">{{ followError }}</p>
           <div class="modal-buttons">
             <button @click="confirmFollowFlight" :disabled="isSubmitting">
               {{ isSubmitting ? 'Processing...' : `Follow Flight ${selectedFlight.flight_number}` }}
             </button>
-            <button @click="followModalOpen = false">Cancel</button>
+            <button @click="closeFollowModal">Cancel</button>
           </div>
         </div>
       </div>
@@ -53,6 +68,7 @@
   import Flight from '../components/Flight.vue';
   import FilterFlights from '../components/FilterFlights.vue';
   import dataService from '../services/dataService';
+  import errorHandler from '../services/errorHandler';
   import appConfig from '../config/appConfig';
   
   export default {
@@ -71,38 +87,68 @@
       const followedFlights = ref([]);
       const isLoading = ref(true);
       const isSubmitting = ref(false);
+      const error = ref(null);
+      const emailError = ref('');
+      const followError = ref('');
       
-      onMounted(async () => {
+      const loadFlights = async () => {
         try {
           isLoading.value = true;
+          error.value = null;
+          
           const response = await dataService.getArrivalFlights();
+          
+          if (response.error) {
+            console.warn('Data loaded with errors:', response.error);
+          }
           
           if (response.status === 200) {
             const flightsData = response.data.flights || response.data;
             
             // Adapter les données pour l'affichage
-            flights.value = flightsData.map((flight) => ({
-              flight_number: flight.flight_number,
-              city: flight.origin_city,
-              company: flight.company,
-              arrival_time: flight.arrival_time_due, // Utiliser l'heure prévue comme heure principale
-              arrival_time_estimated: flight.arrival_time_estimated,
-              status: flight.status,
-              origin_airport_code: flight.origin_airport_code
-            }));
+            flights.value = flightsData.map((flight) => {
+              try {
+                return {
+                  flight_number: flight.flight_number,
+                  city: flight.origin_city || flight.city || 'Unknown',
+                  company: flight.company || 'Unknown Airline',
+                  arrival_time: flight.arrival_time_due || flight.arrival_time || '00:00',
+                  arrival_time_estimated: flight.arrival_time_estimated,
+                  status: flight.status || 'Unknown',
+                  origin_airport_code: flight.origin_airport_code
+                };
+              } catch (err) {
+                console.error('Error mapping flight data:', err, flight);
+                return null;
+              }
+            }).filter(Boolean); // Filtrer les valeurs nulles
             
             if (appConfig.debug) {
-              console.log(`Loaded ${flights.value.length} arrival flights using ${appConfig.dataSource}`);
-              console.log('First flight data:', flights.value[0]);
+              console.log(`Loaded ${flights.value.length} arrival flights`);
+              if (flights.value.length > 0) {
+                console.log('First flight data:', flights.value[0]);
+              }
             }
           } else {
-            console.error('Error fetching flights:', response);
+            throw new Error(response.error?.message || 'Failed to load flights');
           }
-        } catch (error) {
-          console.error('Error loading flights:', error);
+        } catch (err) {
+          const handledError = errorHandler.handleError(err, 'FlightsArrival.loadFlights');
+          error.value = {
+            message: errorHandler.getUserFriendlyMessage(handledError),
+            raw: handledError
+          };
         } finally {
           isLoading.value = false;
         }
+      };
+      
+      const retryLoad = () => {
+        loadFlights();
+      };
+      
+      onMounted(() => {
+        loadFlights();
       });
       
       const filteredFlights = computed(() => {
@@ -141,15 +187,42 @@
         searchFlightInput.value = '';
       };
       
+      const validateEmail = (email) => {
+        if (!email) {
+          return 'Email is required';
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          return 'Invalid email format';
+        }
+        return '';
+      };
+      
       const openFollowModal = (flight) => {
         selectedFlight.value = flight;
         followModalOpen.value = true;
+        emailError.value = '';
+        followError.value = '';
+      };
+      
+      const closeFollowModal = () => {
+        followModalOpen.value = false;
+        followEmail.value = '';
+        emailError.value = '';
+        followError.value = '';
       };
       
       const confirmFollowFlight = async () => {
+        emailError.value = validateEmail(followEmail.value);
+        
+        if (emailError.value) {
+          return;
+        }
+        
         if (followEmail.value && selectedFlight.value) {
           try {
             isSubmitting.value = true;
+            followError.value = '';
+            
             const response = await dataService.followFlight(
               selectedFlight.value.flight_number,
               followEmail.value
@@ -161,11 +234,11 @@
                 email: followEmail.value,
                 subscriptionId: response.data.subscriptionId
               });
-              followModalOpen.value = false;
-              followEmail.value = '';
+              closeFollowModal();
             }
-          } catch (error) {
-            console.error('Error following flight:', error);
+          } catch (err) {
+            const handledError = errorHandler.handleError(err, 'FlightsArrival.confirmFollowFlight');
+            followError.value = errorHandler.getUserFriendlyMessage(handledError);
           } finally {
             isSubmitting.value = false;
           }
@@ -189,10 +262,15 @@
         selectedFlight,
         followEmail,
         openFollowModal,
+        closeFollowModal,
         confirmFollowFlight,
         isFlightFollowed,
         isLoading,
-        isSubmitting
+        isSubmitting,
+        error,
+        emailError,
+        followError,
+        retryLoad
       };
     }
   };
@@ -207,7 +285,7 @@
     margin-bottom: 10px;
   }
   
-  .no-results {
+  .no-results, .no-data {
     padding: 20px;
     text-align: center;
     color: #999;
@@ -217,6 +295,40 @@
     text-align: center;
     padding: 20px;
     color: #666;
+  }
+  
+  .error {
+    text-align: center;
+    padding: 20px;
+    color: #dc3545;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    margin: 20px 0;
+  }
+  
+  .retry-button {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  
+  .retry-button:hover {
+    background-color: #218838;
+  }
+  
+  .error-message {
+    color: #dc3545;
+    font-size: 0.9em;
+    margin-top: 5px;
+  }
+  
+  input.error {
+    border-color: #dc3545;
   }
   
   .fade-enter-active,

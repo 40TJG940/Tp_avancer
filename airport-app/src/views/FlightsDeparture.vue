@@ -14,17 +14,15 @@
         />
       </Transition>
       
-      <!-- Indicateur de chargement -->
       <div v-if="isLoading" class="loading">
         Loading flights...
       </div>
       
-      <!-- Message d'erreur si l'API échoue -->
-      <div v-if="error" class="error">
-        {{ error }}
+      <div v-else-if="error" class="error">
+        <p>{{ error.message }}</p>
+        <button @click="retryLoad" class="retry-button">Retry</button>
       </div>
       
-      <!-- Liste des vols -->
       <div v-else class="flights-list">
         <Flight
           v-for="flight in filteredFlights"
@@ -34,22 +32,31 @@
           :is-followed="isFlightFollowed(flight.flight_number)"
           @follow="openFollowModal"
         />
-        <p v-if="filteredFlights.length === 0" class="no-results">
+        <p v-if="filteredFlights.length === 0 && searchFlightInput" class="no-results">
           No flights found matching your search criteria.
+        </p>
+        <p v-else-if="flights.length === 0" class="no-data">
+          No departure flights available.
         </p>
       </div>
       
-      <!-- Modal pour suivre un vol -->
       <div v-if="followModalOpen" class="modal">
         <div class="modal-content">
           <h3>Follow Flight {{ selectedFlight.flight_number }}</h3>
           <label for="followEmail">Your email:</label>
-          <input id="followEmail" v-model="followEmail" type="email">
+          <input 
+            id="followEmail" 
+            v-model="followEmail" 
+            type="email"
+            :class="{ 'error': emailError }"
+          >
+          <p v-if="emailError" class="error-message">{{ emailError }}</p>
+          <p v-if="followError" class="error-message">{{ followError }}</p>
           <div class="modal-buttons">
             <button @click="confirmFollowFlight" :disabled="isSubmitting">
               {{ isSubmitting ? 'Processing...' : `Follow Flight ${selectedFlight.flight_number}` }}
             </button>
-            <button @click="followModalOpen = false">Cancel</button>
+            <button @click="closeFollowModal">Cancel</button>
           </div>
         </div>
       </div>
@@ -60,7 +67,9 @@
   import { ref, computed, onMounted } from 'vue';
   import Flight from '../components/Flight.vue';
   import FilterFlights from '../components/FilterFlights.vue';
-  import flightApi from '../services/flightApi';
+  import dataService from '../services/dataService';
+  import errorHandler from '../services/errorHandler';
+  import appConfig from '../config/appConfig';
   
   export default {
     name: 'FlightsDeparture',
@@ -69,7 +78,6 @@
       FilterFlights
     },
     setup() {
-      // États réactifs
       const flights = ref([]);
       const searchFlightInput = ref('');
       const showFilters = ref(false);
@@ -80,40 +88,55 @@
       const isLoading = ref(true);
       const isSubmitting = ref(false);
       const error = ref(null);
+      const emailError = ref('');
+      const followError = ref('');
       
-      // Fonction asynchrone pour charger les vols
       const loadFlights = async () => {
         try {
           isLoading.value = true;
           error.value = null;
           
-          // Appel asynchrone à l'API
-          const response = await flightApi.getDepartureFlights();
+          const response = await dataService.getDepartureFlights();
+          
+          if (response.error) {
+            console.warn('Data loaded with errors:', response.error);
+          }
           
           if (response.status === 200) {
             flights.value = response.data.flights || response.data;
-            console.log(`Successfully loaded ${flights.value.length} departure flights`);
+            if (appConfig.debug) {
+              console.log(`Loaded ${flights.value.length} departure flights`);
+            }
           } else {
-            throw new Error('Failed to load flights');
+            throw new Error(response.error?.message || 'Failed to load flights');
           }
         } catch (err) {
-          console.error('Error loading flights:', err);
-          error.value = 'Failed to load flights. Please try again later.';
+          const handledError = errorHandler.handleError(err, 'FlightsDeparture.loadFlights');
+          error.value = {
+            message: errorHandler.getUserFriendlyMessage(handledError),
+            raw: handledError
+          };
         } finally {
           isLoading.value = false;
         }
       };
       
-      // Charger les vols quand le composant est monté
+      const retryLoad = () => {
+        loadFlights();
+      };
+      
       onMounted(() => {
         loadFlights();
       });
       
-      // Computed property pour filtrer les vols
       const filteredFlights = computed(() => {
+        if (!flights.value || flights.value.length === 0) {
+          return [];
+        }
+        
         if (!searchFlightInput.value) {
           return flights.value.sort((a, b) => 
-            a.departure_time.localeCompare(b.departure_time)
+            (a.departure_time || '').localeCompare(b.departure_time || '')
           );
         }
         
@@ -124,11 +147,10 @@
         );
         
         return filtered.sort((a, b) => 
-          a.departure_time.localeCompare(b.departure_time)
+          (a.departure_time || '').localeCompare(b.departure_time || '')
         );
       });
       
-      // Méthodes de gestion des filtres
       const handleSearchFilterFlight = (input) => {
         searchFlightInput.value = input;
       };
@@ -137,17 +159,43 @@
         searchFlightInput.value = '';
       };
       
-      // Méthodes pour suivre un vol
+      const validateEmail = (email) => {
+        if (!email) {
+          return 'Email is required';
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          return 'Invalid email format';
+        }
+        return '';
+      };
+      
       const openFollowModal = (flight) => {
         selectedFlight.value = flight;
         followModalOpen.value = true;
+        emailError.value = '';
+        followError.value = '';
+      };
+      
+      const closeFollowModal = () => {
+        followModalOpen.value = false;
+        followEmail.value = '';
+        emailError.value = '';
+        followError.value = '';
       };
       
       const confirmFollowFlight = async () => {
+        emailError.value = validateEmail(followEmail.value);
+        
+        if (emailError.value) {
+          return;
+        }
+        
         if (followEmail.value && selectedFlight.value) {
           try {
             isSubmitting.value = true;
-            const response = await flightApi.followFlight(
+            followError.value = '';
+            
+            const response = await dataService.followFlight(
               selectedFlight.value.flight_number,
               followEmail.value
             );
@@ -158,11 +206,11 @@
                 email: followEmail.value,
                 subscriptionId: response.data.subscriptionId
               });
-              followModalOpen.value = false;
-              followEmail.value = '';
+              closeFollowModal();
             }
-          } catch (error) {
-            console.error('Error following flight:', error);
+          } catch (err) {
+            const handledError = errorHandler.handleError(err, 'FlightsDeparture.confirmFollowFlight');
+            followError.value = errorHandler.getUserFriendlyMessage(handledError);
           } finally {
             isSubmitting.value = false;
           }
@@ -186,11 +234,15 @@
         selectedFlight,
         followEmail,
         openFollowModal,
+        closeFollowModal,
         confirmFollowFlight,
         isFlightFollowed,
         isLoading,
         isSubmitting,
-        error
+        error,
+        emailError,
+        followError,
+        retryLoad
       };
     }
   };
@@ -205,7 +257,7 @@
     margin-bottom: 10px;
   }
   
-  .no-results {
+  .no-results, .no-data {
     padding: 20px;
     text-align: center;
     color: #999;
@@ -225,6 +277,30 @@
     border: 1px solid #f5c6cb;
     border-radius: 4px;
     margin: 20px 0;
+  }
+  
+  .retry-button {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  
+  .retry-button:hover {
+    background-color: #218838;
+  }
+  
+  .error-message {
+    color: #dc3545;
+    font-size: 0.9em;
+    margin-top: 5px;
+  }
+  
+  input.error {
+    border-color: #dc3545;
   }
   
   .fade-enter-active,

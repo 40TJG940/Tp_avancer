@@ -1,16 +1,20 @@
-// Configuration de l'application
+// Configuration de l'application pour tester les erreurs
 export const appConfig = {
     // Choisir entre 'json' ou 'api'
-    dataSource: 'json', // Changez cette valeur à 'api' pour utiliser l'API simulée
+    dataSource: 'api', // Mettre à 'api' pour tester les erreurs
     
-    // Délai simulé pour l'API en millisecondes
-    apiDelay: 100,
-    
-    // URL de l'API (pour une future utilisation avec une vraie API)
-    apiUrl: 'https://mocki.io/fake-json-api',
+    // URLs invalides pour tester les erreurs
+    apiUrls: {
+        departures: 'https://mocki.io/v1/578a185a-a042-458d-8ada-e988f4c7935d',
+        arrivals: 'https://mocki.io/v1/c5b9b3b4-7ddd-4563-880b-0aa74ca9e2f1',
+        trafficStatus: 'https://mocki.io/v1/cd43dbc9-0636-40c2-b2d5-68e9c2959b4f'
+    },
     
     // Activer/désactiver les logs de débogage
-    debug: true
+    debug: true,
+    
+    // Timeout des requêtes API (en ms)
+    apiTimeout: 5000,
   };
   
   export default appConfig;
